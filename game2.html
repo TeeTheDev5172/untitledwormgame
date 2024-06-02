@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Untitled Worm Game</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    perspective: 800px;
+    background: linear-gradient(45deg, #0f0c29, #302b63, #24243e);
+    background-size: 600% 600%;
+    animation: gradient 15s ease infinite;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  canvas {
+    display: block;
+  }
+  #controls {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+  }
+  #controls label {
+    color: #fff;
+    margin-right: 10px;
+  }
+  #seed-input {
+    width: 100px;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="controls">
+  <label for="particle-count">Particle Count:</label>
+  <input type="range" id="particle-count" min="100" max="1000" value="300">
+  <br>
+  <label for="speed">Speed:</label>
+  <input type="range" id="speed" min="1" max="10" value="5">
+  <br>
+  <label for="particle-radius">Particle Radius:</label>
+  <input type="range" id="particle-radius" min="1" max="10" value="5">
+  <br>
+  <label for="trail-length">Trail Length:</label>
+  <input type="range" id="trail-length" min="0" max="50" value="20">
+  <br>
+  <label for="toggle-trails">Show Trails:</label>
+  <input type="checkbox" id="toggle-trails" checked>
+  <br>
+  <label for="repel-particles">Repel Particles:</label>
+  <input type="checkbox" id="repel-particles">
+  <br>
+  <label for="seed-input">Seed:</label>
+  <input type="text" id="seed-input" placeholder="X,Y">
+  <button id="add-seed">Add Seed</button>
+  <br>
+  <button id="spawn-objects">Spawn Objects</button>
+  <button id="activate-worm-eaters">Activate Worm Eaters</button>
+  <button id="create-black-hole">Create Black Hole</button>
+  <br><br>
+  <label for="mod-code">Mod Code:</label>
+  <textarea id="mod-code" rows="5" cols="30">// Place your mod code here</textarea>
+  <br>
+  <button onclick="applyMod()">Apply Mod</button>
+</div>
+<script>
+  // Initialize canvas
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  function setCanvasSize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+  setCanvasSize();
+  window.addEventListener('resize', setCanvasSize);
+
+  // Sound effects
+  const eatSound = new Audio('https://freesound.org/data/previews/193/193376_2740294-lq.mp3');
+  const blackHoleSound = new Audio('https://freesound.org/data/previews/41/41335_1022657-lq.mp3');
+
+  // Generate random color
+  function randomColor() {
+    return `hsla(${Math.random() * 360}, 100%, 50%, 0.8)`;
+  }
+
+  // Particle class
+  class Particle {
+    constructor(x, y, speed, radius) {
+      this.x = x;
+      this.y = y;
+      this.vx = Math.random() * 2 - 1;
+      this.vy = Math.random() * 2 - 1;
+      this.radius = radius;
+      this.color = randomColor();
+      this.trail = [];
+      this.speed = speed;
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+    }
+
+    update(mouseX, mouseY, showTrails, trailLength, repel) {
+      const dx = mouseX - this.x;
+      const dy = mouseY - this.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const forceDirectionX = dx / distance;
+      const forceDirectionY = dy / distance;
+      const maxDistance = 100;
+      const force = (maxDistance - distance) / maxDistance;
+      const directionX = forceDirectionX * force * 0.2;
+      const directionY = forceDirectionY * force * 0.2;
+
+      if (distance < maxDistance) {
+        if (repel) {
+          this.vx += directionX;
+          this.vy += directionY;
+        } else {
+          this.vx -= directionX;
+          this.vy -= directionY;
+        }
+      }
+
+      this.x += this.vx * this.speed;
+      this.y += this.vy * this.speed;
+
+      if (this.x < 0 || this.x > width) {
+        this.vx *= -1;
+      }
+      if (this.y < 0 || this.y > height) {
+        this.vy *= -1;
+      }
+
+      // Store trail points
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > trailLength) {
+        this.trail.shift();
+      }
+
+      // Draw trail
+      if (showTrails) {
+        this.drawTrail();
+      }
+    }
+
+    drawTrail() {
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+      }
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = this.radius;
+      ctx.stroke();
+    }
+  }
+
+  // Worm Eater class
+  class WormEater {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.size = 15;
+      this.color = "#00ff00";
+      this.speed = 1;
+      this.angle = Math.random() * Math.PI * 2; // Initial random angle
+    }
+
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+    }
+
+    update(particles) {
+      // Move like a worm
+      this.x += Math.cos(this.angle) * this.speed;
+      this.y += Math.sin(this.angle) * this.speed;
+
+      // Change direction randomly
+      if (Math.random() < 0.01) {
+        this.angle += Math.random() * 0.5 - 0.25;
+      }
+
+      // Wrap around edges
+      if (this.x < 0) this.x = width;
+      if (this.x > width) this.x = 0;
+      if (this.y < 0) this.y = height;
+      if (this.y > height) this.y = 0;
+
+      // Check for collision with particles
+      particles.forEach(particle => {
+        const dx = particle.x - this.x;
+        const dy = particle.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < this.size / 2 + particle.radius) {
+          particle.x = Math.random() * width;
+          particle.y = Math.random() * height;
+          eatSound.play();
+        }
+      });
+    }
+  }
+
+  // Black Hole class
+  class BlackHole {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.radius = 20;
+      this.color = "#000000";
+      this.growthRate = 0.1;
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+    }
+
+    update(particles) {
+      particles.forEach(particle => {
+        const dx = this.x - particle.x;
+        const dy = this.y - particle.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const forceDirectionX = dx / distance;
+        const forceDirectionY = dy / distance;
+        const maxDistance = 200;
+        const force = (maxDistance - distance) / maxDistance;
+        const directionX = forceDirectionX * force * 0.05;
+        const directionY = forceDirectionY * force * 0.05;
+
+        if (distance < maxDistance) {
+          particle.vx += directionX;
+          particle.vy += directionY;
+        }
+
+        if (distance < this.radius) {
+          particles.splice(particles.indexOf(particle), 1);
+          this.radius += this.growthRate;
+          blackHoleSound.play();
+        }
+      });
+    }
+  }
+
+  // Create particles
+  let particles = [];
+  let particleCount = 300;
+  let particleRadius = 5;
+  let trailLength = 20;
+  let showTrails = true;
+  let repel = false;
+  function createParticles() {
+    particles = [];
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle(Math.random() * width, Math.random() * height, 1, particleRadius));
+    }
+  }
+  createParticles();
+
+  // Worm Eaters
+  let wormEaters = [];
+  function activateWormEaters() {
+    wormEaters = [];
+    for (let i = 0; i < 5; i++) {
+      wormEaters.push(new WormEater(Math.random() * width, Math.random() * height));
+    }
+  }
+
+  // Black Holes
+  let blackHoles = [];
+  let isPreviewingBlackHole = false;
+  let previewBlackHole = null;
+
+  // Track mouse movement
+  let mouseX = width / 2;
+  let mouseY = height / 2;
+  window.addEventListener('mousemove', (event) => {
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+  });
+
+  window.addEventListener('click', (event) => {
+    if (isPreviewingBlackHole) {
+      blackHoles.push(new BlackHole(mouseX, mouseY));
+      isPreviewingBlackHole = false;
+      previewBlackHole = null;
+    }
+  });
+
+  // Update particle count
+  const particleCountInput = document.getElementById('particle-count');
+  particleCountInput.addEventListener('input', () => {
+    particleCount = parseInt(particleCountInput.value);
+    createParticles();
+  });
+
+  // Update speed
+  const speedInput = document.getElementById('speed');
+  speedInput.addEventListener('input', () => {
+    const speed = parseInt(speedInput.value);
+    particles.forEach(particle => particle.speed = speed);
+  });
+
+  // Update particle radius
+  const particleRadiusInput = document.getElementById('particle-radius');
+  particleRadiusInput.addEventListener('input', () => {
+    particleRadius = parseInt(particleRadiusInput.value);
+    particles.forEach(particle => particle.radius = particleRadius);
+  });
+
+  // Update trail length
+  const trailLengthInput = document.getElementById('trail-length');
+  trailLengthInput.addEventListener('input', () => {
+    trailLength = parseInt(trailLengthInput.value);
+  });
+
+  // Toggle trails
+  const toggleTrailsCheckbox = document.getElementById('toggle-trails');
+  toggleTrailsCheckbox.addEventListener('change', () => {
+    showTrails = toggleTrailsCheckbox.checked;
+  });
+
+  // Toggle particle repulsion
+  const repelParticlesCheckbox = document.getElementById('repel-particles');
+  repelParticlesCheckbox.addEventListener('change', () => {
+    repel = repelParticlesCheckbox.checked;
+  });
+
+  // Add seed
+  const addSeedButton = document.getElementById('add-seed');
+  addSeedButton.addEventListener('click', () => {
+    const seedInput = document.getElementById('seed-input').value;
+    const [x, y] = seedInput.split(',').map(parseFloat);
+    if (!isNaN(x) && !isNaN(y)) {
+      const newParticle = new Particle(x, y, 0, particleRadius);
+      particles.push(newParticle);
+    }
+  });
+
+  // Spawn objects
+  const spawnObjectsButton = document.getElementById('spawn-objects');
+  spawnObjectsButton.addEventListener('click', () => {
+    for (let i = 0; i < 10; i++) {
+      const newParticle = new Particle(Math.random() * width, Math.random() * height, 1, particleRadius);
+      particles.push(newParticle);
+    }
+  });
+
+  // Activate worm eaters
+  const activateWormEatersButton = document.getElementById('activate-worm-eaters');
+  activateWormEatersButton.addEventListener('click', () => {
+    activateWormEaters();
+  });
+
+  // Create black hole
+  const createBlackHoleButton = document.getElementById('create-black-hole');
+  createBlackHoleButton.addEventListener('click', () => {
+    isPreviewingBlackHole = true;
+    previewBlackHole = new BlackHole(mouseX, mouseY);
+  });
+
+  // Apply mod
+  function applyMod() {
+    const modCode = document.getElementById('mod-code').value;
+    try {
+      eval(modCode);
+    } catch (error) {
+      console.error('Error applying mod:', error);
+    }
+  }
+
+  // Animation loop
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+
+    particles.forEach(particle => {
+      particle.update(mouseX, mouseY, showTrails, trailLength, repel);
+      particle.draw();
+    });
+
+    wormEaters.forEach(wormEater => {
+      wormEater.update(particles);
+      wormEater.draw();
+    });
+
+    blackHoles.forEach(blackHole => {
+      blackHole.update(particles);
+      blackHole.draw();
+    });
+
+    if (isPreviewingBlackHole && previewBlackHole) {
+      previewBlackHole.x = mouseX;
+      previewBlackHole.y = mouseY;
+      previewBlackHole.draw();
+    }
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+</body>
+</html>
