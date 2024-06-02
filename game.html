@@ -3,19 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Untitled Worm Game</title>
+<title>Unitled Worm Game</title>
 <style>
   body {
     margin: 0;
     overflow: hidden;
     perspective: 800px;
-    background-color: #000;
+    background: linear-gradient(45deg, #0f0c29, #302b63, #24243e);
+    background-size: 600% 600%;
+    animation: gradient 15s ease infinite;
     color: #fff;
     font-family: Arial, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
+  }
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
   canvas {
     display: block;
@@ -55,6 +62,9 @@
   <label for="toggle-trails">Show Trails:</label>
   <input type="checkbox" id="toggle-trails" checked>
   <br>
+  <label for="repel-particles">Repel Particles:</label>
+  <input type="checkbox" id="repel-particles">
+  <br>
   <label for="seed-input">Seed:</label>
   <input type="text" id="seed-input" placeholder="X,Y">
   <button id="add-seed">Add Seed</button>
@@ -67,7 +77,6 @@
   <textarea id="mod-code" rows="5" cols="30">// Place your mod code here</textarea>
   <br>
   <button onclick="applyMod()">Apply Mod</button>
-  
 </div>
 <script>
   // Initialize canvas
@@ -82,6 +91,10 @@
   }
   setCanvasSize();
   window.addEventListener('resize', setCanvasSize);
+
+  // Sound effects
+  const eatSound = new Audio('https://freesound.org/data/previews/193/193376_2740294-lq.mp3');
+  const blackHoleSound = new Audio('https://freesound.org/data/previews/41/41335_1022657-lq.mp3');
 
   // Generate random color
   function randomColor() {
@@ -108,7 +121,7 @@
       ctx.fill();
     }
 
-    update(mouseX, mouseY, showTrails, trailLength) {
+    update(mouseX, mouseY, showTrails, trailLength, repel) {
       const dx = mouseX - this.x;
       const dy = mouseY - this.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
@@ -120,8 +133,13 @@
       const directionY = forceDirectionY * force * 0.2;
 
       if (distance < maxDistance) {
-        this.vx -= directionX;
-        this.vy -= directionY;
+        if (repel) {
+          this.vx += directionX;
+          this.vy += directionY;
+        } else {
+          this.vx -= directionX;
+          this.vy -= directionY;
+        }
       }
 
       this.x += this.vx * this.speed;
@@ -195,9 +213,10 @@
         const dx = particle.x - this.x;
         const dy = particle.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if(distance < this.size / 2 + particle.radius) {
+        if (distance < this.size / 2 + particle.radius) {
           particle.x = Math.random() * width;
           particle.y = Math.random() * height;
+          eatSound.play();
         }
       });
     }
@@ -225,9 +244,22 @@
         const dx = this.x - particle.x;
         const dy = this.y - particle.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
+        const forceDirectionX = dx / distance;
+        const forceDirectionY = dy / distance;
+        const maxDistance = 200;
+        const force = (maxDistance - distance) / maxDistance;
+        const directionX = forceDirectionX * force * 0.05;
+        const directionY = forceDirectionY * force * 0.05;
+
+        if (distance < maxDistance) {
+          particle.vx += directionX;
+          particle.vy += directionY;
+        }
+
         if (distance < this.radius) {
           particles.splice(particles.indexOf(particle), 1);
           this.radius += this.growthRate;
+          blackHoleSound.play();
         }
       });
     }
@@ -239,6 +271,7 @@
   let particleRadius = 5;
   let trailLength = 20;
   let showTrails = true;
+  let repel = false;
   function createParticles() {
     particles = [];
     for (let i = 0; i < particleCount; i++) {
@@ -300,6 +333,12 @@
     showTrails = toggleTrailsCheckbox.checked;
   });
 
+  // Toggle particle repulsion
+  const repelParticlesCheckbox = document.getElementById('repel-particles');
+  repelParticlesCheckbox.addEventListener('change', () => {
+    repel = repelParticlesCheckbox.checked;
+  });
+
   // Add seed
   const addSeedButton = document.getElementById('add-seed');
   addSeedButton.addEventListener('click', () => {
@@ -327,13 +366,11 @@
   });
 
   // Create black hole
-  // Create black hole
-const createBlackHoleButton = document.getElementById('create-black-hole');
-createBlackHoleButton.addEventListener('click', () => {
-  const newBlackHole = new BlackHole(mouseX, mouseY); // Use current mouseX and mouseY
-  blackHoles.push(newBlackHole);
-});
-
+  const createBlackHoleButton = document.getElementById('create-black-hole');
+  createBlackHoleButton.addEventListener('click', () => {
+    const newBlackHole = new BlackHole(mouseX, mouseY); // Use current mouseX and mouseY
+    blackHoles.push(newBlackHole);
+  });
 
   // Apply mod
   function applyMod() {
@@ -350,7 +387,7 @@ createBlackHoleButton.addEventListener('click', () => {
     ctx.clearRect(0, 0, width, height);
 
     particles.forEach(particle => {
-      particle.update(mouseX, mouseY, showTrails, trailLength);
+      particle.update(mouseX, mouseY, showTrails, trailLength, repel);
       particle.draw();
     });
 
@@ -370,4 +407,3 @@ createBlackHoleButton.addEventListener('click', () => {
 </script>
 </body>
 </html>
-
