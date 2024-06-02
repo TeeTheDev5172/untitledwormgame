@@ -88,14 +88,26 @@
     <div class="container">
         <h1>About</h1>
         <p>Started out as a stupid web page that turned into a funny game about worms. The worms move away from your cursor but don't let that stop you from doing whatever you want to them. You can mod the game using javascript. There is a tutorial on our discord.</p>
-        <button onclick="openGamePage()">Play Game</button>
+        <button onclick="showModeSelection()">Play Game</button>
         <button class="discord-button" onclick="openDiscord()">Join Discord</button>
     </div>
 
     <script>
-        function openGamePage() {
-            // Change the path to "game.html" based on your file structure
-            window.location.href = "game.html";
+        function showModeSelection() {
+            var container = document.querySelector('.container');
+            container.innerHTML = `
+                <h1>Select Game Mode</h1>
+                <button onclick="openGamePage('sandbox')">Sandbox Mode</button>
+                <button onclick="openGamePage('basic')">Basic Mode</button>
+            `;
+        }
+
+        function openGamePage(mode) {
+            if (mode === 'sandbox') {
+                window.location.href = "game.html";
+            } else if (mode === 'basic') {
+                window.location.href = "game2.html";
+            }
         }
 
         function openDiscord() {
