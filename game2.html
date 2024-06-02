@@ -26,21 +26,88 @@
   }
   canvas {
     display: block;
+    cursor: pointer; /* Change cursor to pointer when hovering over canvas */
   }
   #controls {
     position: fixed;
     top: 20px;
     left: 20px;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 10px;
-    border-radius: 5px;
+    background: linear-gradient(135deg, #0046c3, #007bff);
+    padding: 20px;
+    border-radius: 10px;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease-in-out;
+  }
+  #controls.hidden {
+    transform: translateY(-100%);
   }
   #controls label {
-    color: #fff;
     margin-right: 10px;
+    display: block;
+    margin-bottom: 5px;
   }
-  #seed-input {
-    width: 100px;
+  #controls input[type="range"] {
+    width: 200px;
+    -webkit-appearance: none; /* Remove default styles */
+    appearance: none;
+    height: 5px;
+    background: #ddd; /* Track color */
+    border-radius: 5px;
+    outline: none; /* Remove default focus styles */
+  }
+  #controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Remove default styles */
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    background: #fff; /* Thumb color */
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  #controls input[type="checkbox"] {
+    margin-right: 5px;
+    cursor: pointer;
+  }
+  #controls button {
+    background: linear-gradient(135deg, #007bff, #0046c3);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  }
+  #controls button:hover {
+    background: linear-gradient(135deg, #0046c3, #007bff);
+  }
+  #console-log {
+    margin-top: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #0046c3, #007bff);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+  #show-ui-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #007bff, #0046c3);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  }
+  #show-ui-button:hover {
+    background: linear-gradient(135deg, #0046c3, #007bff);
   }
 </style>
 </head>
@@ -69,16 +136,28 @@
   <input type="text" id="seed-input" placeholder="X,Y">
   <button id="add-seed">Add Seed</button>
   <br>
-  <button id="spawn-objects">Spawn Objects</button>
+  <button id="spawn-water">Spawn Water</button>
+  <button id="activate-worm-dragging">Enable Worm Dragging</button>
   <button id="activate-worm-eaters">Activate Worm Eaters</button>
   <button id="create-black-hole">Create Black Hole</button>
   <br><br>
   <label for="mod-code">Mod Code:</label>
-  <textarea id="mod-code" rows="5" cols="30">// Place your mod code here</textarea>
-  <br>
-  <button onclick="applyMod()">Apply Mod</button>
-</div>
-<script>
+  
+    <textarea id="mod-code" rows="5" cols="30">// Place your mod code here</textarea>
+    <br>
+    <div id="console-log"></div>
+    <button onclick="applyMod()">Apply Mod</button>
+  </div>
+  <button id="show-ui-button">Show UI</button>
+  <script>
+    const controls = document.getElementById('controls');
+    const showUIButton = document.getElementById('show-ui-button');
+  
+    showUIButton.addEventListener('click', () => {
+      controls.classList.toggle('hidden');
+      showUIButton.textContent = controls.classList.contains('hidden') ? 'Show UI' : 'Hide UI';
+    });
+  
   // Initialize canvas
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
@@ -100,6 +179,154 @@
   function randomColor() {
     return `hsla(${Math.random() * 360}, 100%, 50%, 0.8)`;
   }
+// Water Particle class
+class WaterParticle {
+  constructor(x, y, radius) {
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.color = "#0077FF"; // Blue color for water
+    this.vx = 0; // Velocity in the x direction
+    this.vy = 0; // Velocity in the y direction
+    this.gravity = 0.1; // Gravity affecting the water particle
+  }
+
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+  }
+
+  update() {
+    this.vy += this.gravity; // Apply gravity
+    this.x += this.vx;
+    this.y += this.vy;
+    function logToConsole(message) {
+  const consoleLogElement = document.getElementById('console-log');
+  const logEntry = document.createElement('div');
+  logEntry.textContent = message;
+  consoleLogElement.appendChild(logEntry);
+  // Scroll to the bottom to show the latest log entry
+  consoleLogElement.scrollTop = consoleLogElement.scrollHeight;
+}
+
+// Usage examples:
+
+  }
+}
+// Function to log messages to the console and display them in the UI
+function logToConsole(message) {
+  const consoleLogElement = document.getElementById('console-log');
+  const logEntry = document.createElement('div');
+  logEntry.textContent = message;
+  consoleLogElement.appendChild(logEntry);
+  // Scroll to the bottom to show the latest log entry
+  consoleLogElement.scrollTop = consoleLogElement.scrollHeight;
+}
+// Sandbox Kit mod with 10 new buttons
+function applySandboxKitMod() {
+  // Add 10 new buttons to the UI
+
+  // Feature 1: Button to change background color randomly
+  const changeBackgroundColorButton = document.createElement('button');
+  changeBackgroundColorButton.textContent = 'Randomize Background Color';
+  changeBackgroundColorButton.addEventListener('click', () => {
+    const randomColor = `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`;
+    document.body.style.background = randomColor;
+  });
+  controls.appendChild(changeBackgroundColorButton);
+
+  // Feature 2: Button to toggle particle trails
+  const toggleTrailsButton = document.createElement('button');
+  toggleTrailsButton.textContent = 'Toggle Particle Trails';
+  toggleTrailsButton.addEventListener('click', () => {
+    showTrails = !showTrails;
+  });
+  controls.appendChild(toggleTrailsButton);
+
+  // Feature 3: Button to reset particle positions
+  const resetParticlesButton = document.createElement('button');
+  resetParticlesButton.textContent = 'Reset Particle Positions';
+  resetParticlesButton.addEventListener('click', () => {
+    particles.forEach(particle => {
+      particle.x = Math.random() * width;
+      particle.y = Math.random() * height;
+    });
+  });
+  controls.appendChild(resetParticlesButton);
+
+  // Feature 4: Button to toggle background animation
+  const toggleBackgroundAnimationButton = document.createElement('button');
+  toggleBackgroundAnimationButton.textContent = 'Toggle Background Animation';
+  toggleBackgroundAnimationButton.addEventListener('click', () => {
+    const currentState = document.body.style.animationPlayState;
+    document.body.style.animationPlayState = currentState === 'running' ? 'paused' : 'running';
+  });
+  controls.appendChild(toggleBackgroundAnimationButton);
+
+  // Feature 5: Button to add more particles
+  const addParticlesButton = document.createElement('button');
+  addParticlesButton.textContent = 'Add Particles';
+  addParticlesButton.addEventListener('click', () => {
+    particleCount += 100;
+    createParticles();
+  });
+  controls.appendChild(addParticlesButton);
+
+  // Feature 6: Button to remove particles
+  const removeParticlesButton = document.createElement('button');
+  removeParticlesButton.textContent = 'Remove Particles';
+  removeParticlesButton.addEventListener('click', () => {
+    particleCount -= 100;
+    if (particleCount < 0) particleCount = 0;
+    createParticles();
+  });
+  controls.appendChild(removeParticlesButton);
+
+  // Feature 7: Button to increase particle speed
+  const increaseSpeedButton = document.createElement('button');
+  increaseSpeedButton.textContent = 'Increase Particle Speed';
+  increaseSpeedButton.addEventListener('click', () => {
+    particles.forEach(particle => particle.speed += 1);
+  });
+  controls.appendChild(increaseSpeedButton);
+
+  // Feature 8: Button to decrease particle speed
+  const decreaseSpeedButton = document.createElement('button');
+  decreaseSpeedButton.textContent = 'Decrease Particle Speed';
+  decreaseSpeedButton.addEventListener('click', () => {
+    particles.forEach(particle => {
+      particle.speed -= 1;
+      if (particle.speed < 0) particle.speed = 0;
+    });
+  });
+  controls.appendChild(decreaseSpeedButton);
+
+  // Feature 9: Button to create a black hole
+  const createBlackHoleButton = document.createElement('button');
+  createBlackHoleButton.textContent = 'Create Black Hole';
+  createBlackHoleButton.addEventListener('click', () => {
+    const newBlackHole = new BlackHole(Math.random() * width, Math.random() * height);
+    blackHoles.push(newBlackHole);
+  });
+  controls.appendChild(createBlackHoleButton);
+
+  // Feature 10: Button to clear console log
+  const clearConsoleButton = document.createElement('button');
+  clearConsoleButton.textContent = 'Clear Console Log';
+  clearConsoleButton.addEventListener('click', () => {
+    const consoleLogElement = document.getElementById('console-log');
+    consoleLogElement.innerHTML = '';
+  });
+  controls.appendChild(clearConsoleButton);
+
+  // Log message to indicate mod applied
+  logToConsole('Sandbox Kit mod applied successfully!');
+}
+
+// Usage examples:
+logToConsole('Game Initiallized. Welcome to sandbox :) ');
 
   // Particle class
   class Particle {
@@ -179,12 +406,14 @@
   // Worm Eater class
   class WormEater {
     constructor(x, y) {
-      this.x = x;
+      this.x = x
+      ;
       this.y = y;
       this.size = 15;
       this.color = "#00ff00";
       this.speed = 1;
       this.angle = Math.random() * Math.PI * 2; // Initial random angle
+      this.isDragging = false; // Flag to indicate dragging
     }
 
     draw() {
@@ -194,8 +423,10 @@
 
     update(particles) {
       // Move like a worm
-      this.x += Math.cos(this.angle) * this.speed;
-      this.y += Math.sin(this.angle) * this.speed;
+      if (!this.isDragging) {
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+      }
 
       // Change direction randomly
       if (Math.random() < 0.01) {
@@ -222,7 +453,31 @@
     }
   }
 
-  // Black Hole class
+  // Create particles
+  let particles = [];
+  let particleCount = 300;
+  let particleRadius = 5;
+  let trailLength = 20;
+  let showTrails = true;
+  let repel = false;
+  function createParticles() {
+    particles = [];
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle(Math.random() * width, Math.random() * height, 1, particleRadius));
+    }
+  }
+  createParticles();
+
+  // Worm Eaters
+  let wormEaters = [];
+  function activateWormEaters() {
+    wormEaters = [];
+    for (let i = 0; i < 5; i++) {
+      wormEaters.push(new WormEater(Math.random() * width, Math.random() * height));
+    }
+  }
+
+  // Black Holes
   class BlackHole {
     constructor(x, y) {
       this.x = x;
@@ -265,31 +520,7 @@
     }
   }
 
-  // Create particles
-  let particles = [];
-  let particleCount = 300;
-  let particleRadius = 5;
-  let trailLength = 20;
-  let showTrails = true;
-  let repel = false;
-  function createParticles() {
-    particles = [];
-    for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle(Math.random() * width, Math.random() * height, 1, particleRadius));
-    }
-  }
-  createParticles();
-
-  // Worm Eaters
-  let wormEaters = [];
-  function activateWormEaters() {
-    wormEaters = [];
-    for (let i = 0; i < 5; i++) {
-      wormEaters.push(new WormEater(Math.random() * width, Math.random() * height));
-    }
-  }
-
-  // Black Holes
+  // Create black holes
   let blackHoles = [];
   let isPreviewingBlackHole = false;
   let previewBlackHole = null;
@@ -360,13 +591,16 @@
     }
   });
 
-  // Spawn objects
-  const spawnObjectsButton = document.getElementById('spawn-objects');
-  spawnObjectsButton.addEventListener('click', () => {
-    for (let i = 0; i < 10; i++) {
-      const newParticle = new Particle(Math.random() * width, Math.random() * height, 1, particleRadius);
-      particles.push(newParticle);
-    }
+  // Spawn water
+  const spawnWaterButton = document.getElementById('spawn-water');
+  spawnWaterButton.addEventListener('click', () => {
+    // Implement water spawning logic here
+  });
+
+  // Enable worm dragging
+  const activateWormDraggingButton = document.getElementById('activate-worm-dragging');
+  activateWormDraggingButton.addEventListener('click', () => {
+    // Implement worm dragging logic here
   });
 
   // Activate worm eaters
@@ -382,6 +616,7 @@
     previewBlackHole = new BlackHole(mouseX, mouseY);
   });
 
+ 
   // Apply mod
   function applyMod() {
     const modCode = document.getElementById('mod-code').value;
@@ -392,34 +627,150 @@
     }
   }
 
-  // Animation loop
-  function animate() {
-    ctx.clearRect(0, 0, width, height);
-
-    particles.forEach(particle => {
-      particle.update(mouseX, mouseY, showTrails, trailLength, repel);
-      particle.draw();
-    });
-
+  // Enable dragging for worms
+  canvas.addEventListener('mousedown', (event) => {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
     wormEaters.forEach(wormEater => {
-      wormEater.update(particles);
-      wormEater.draw();
+      const dx = mouseX - wormEater.x;
+      const dy = mouseY - wormEater.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance < wormEater.size / 2) {
+        wormEater.isDragging = true;
+      }
     });
+  });
 
-    blackHoles.forEach(blackHole => {
-      blackHole.update(particles);
-      blackHole.draw();
+  canvas.addEventListener('mousemove', (event) => {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    wormEaters.forEach(wormEater => {
+      if (wormEater.isDragging) {
+        wormEater.x = mouseX;
+        wormEater.y = mouseY;
+      }
     });
+  });
 
-    if (isPreviewingBlackHole && previewBlackHole) {
-      previewBlackHole.x = mouseX;
-      previewBlackHole.y = mouseY;
-      previewBlackHole.draw();
+  canvas.addEventListener('mouseup', () => {
+    wormEaters.forEach(wormEater => {
+      wormEater.isDragging = false;
+    });
+  });
+// Enable dragging for worms
+let selectedWormEater = null; // Track the currently selected worm eater
+canvas.addEventListener('mousedown', (event) => {
+  const mouseX = event.clientX;
+  const mouseY = event.clientY;
+  // Check if the mouse is clicking on a worm eater
+  for (let i = 0; i < wormEaters.length; i++) {
+    const wormEater = wormEaters[i];
+    const dx = mouseX - wormEater.x;
+    const dy = mouseY - wormEater.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < wormEater.size / 2) {
+      selectedWormEater = wormEater;
+      // Offset to make dragging smoother
+      selectedWormEater.dragOffsetX = mouseX - wormEater.x;
+      selectedWormEater.dragOffsetY = mouseY - wormEater.y;
+      break;
     }
-
-    requestAnimationFrame(animate);
   }
-  animate();
+});
+
+canvas.addEventListener('mousemove', (event) => {
+  if (selectedWormEater) {
+    // Move the selected worm eater along with the mouse
+    selectedWormEater.x = event.clientX - selectedWormEater.dragOffsetX;
+    selectedWormEater.y = event.clientY - selectedWormEater.dragOffsetY;
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  selectedWormEater = null; // Deselect the worm eater when mouse is released
+});
+
+// Implement water spawning
+const WATER_RADIUS = 5; // Radius of water particles
+const waterParticles = []; // Array to store water particles
+
+function spawnWater(x, y) {
+  const waterClusterSize = 20; // Number of water particles in the cluster
+  const waterRadius = 5; // Radius of individual water particles
+  const spread = 5; // Spread of water particles around the center
+
+  for (let i = 0; i < waterClusterSize; i++) {
+    const offsetX = (Math.random() - 0.5) * spread;
+    const offsetY = (Math.random() - 0.5) * spread;
+    const waterParticle = new WaterParticle(x + offsetX, y + offsetY, waterRadius);
+    waterParticles.push(waterParticle);
+  }
+}
+
+
+window.addEventListener('keydown', (event) => {
+  // Check if the "O" key is pressed
+  if (event.key === 'o' || event.key === 'O') {
+    // Spawn water at the cursor position
+    spawnWater(mouseX, mouseY);
+  }
+});
+
+ // Animation loop
+function animate() {
+  ctx.clearRect(0, 0, width, height);
+
+  particles.forEach(particle => {
+    particle.update(mouseX, mouseY, showTrails, trailLength, repel);
+    particle.draw();
+  });
+
+  wormEaters.forEach(wormEater => {
+    wormEater.update(particles);
+    wormEater.draw();
+  });
+
+  blackHoles.forEach(blackHole => {
+    blackHole.update(particles);
+    blackHole.draw();
+  });
+
+  // Update and draw water particles
+  waterParticles.forEach((waterParticle, index) => {
+    waterParticle.update();
+    waterParticle.draw();
+
+    // Check collision with worms
+    wormEaters.forEach(wormEater => {
+      const dx = wormEater.x - waterParticle.x;
+      const dy = wormEater.y - waterParticle.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < wormEater.size / 2 + waterParticle.radius) {
+        // Worm is scared
+        // Implement your logic to handle the scared state of worms here
+        console.log('Worm is scared by water!');
+      }
+    });
+
+    // Remove water particles that fall out of the canvas
+    if (waterParticle.y - waterParticle.radius > height) {
+      waterParticles.splice(index, 1);
+    }
+  });
+
+  if (isPreviewingBlackHole && previewBlackHole) {
+    previewBlackHole.x = mouseX;
+    previewBlackHole.y = mouseY;
+    previewBlackHole.draw();
+  }
+
+  requestAnimationFrame(animate);
+}
+animate();
+
+
 </script>
 </body>
 </html>
+  
