@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Unitled Worm Game</title>
+<title>Untitled Worm Game</title>
 <style>
   body {
     margin: 0;
@@ -291,6 +291,8 @@
 
   // Black Holes
   let blackHoles = [];
+  let isPreviewingBlackHole = false;
+  let previewBlackHole = null;
 
   // Track mouse movement
   let mouseX = width / 2;
@@ -298,6 +300,14 @@
   window.addEventListener('mousemove', (event) => {
     mouseX = event.clientX;
     mouseY = event.clientY;
+  });
+
+  window.addEventListener('click', (event) => {
+    if (isPreviewingBlackHole) {
+      blackHoles.push(new BlackHole(mouseX, mouseY));
+      isPreviewingBlackHole = false;
+      previewBlackHole = null;
+    }
   });
 
   // Update particle count
@@ -368,8 +378,8 @@
   // Create black hole
   const createBlackHoleButton = document.getElementById('create-black-hole');
   createBlackHoleButton.addEventListener('click', () => {
-    const newBlackHole = new BlackHole(mouseX, mouseY); // Use current mouseX and mouseY
-    blackHoles.push(newBlackHole);
+    isPreviewingBlackHole = true;
+    previewBlackHole = new BlackHole(mouseX, mouseY);
   });
 
   // Apply mod
@@ -400,6 +410,12 @@
       blackHole.update(particles);
       blackHole.draw();
     });
+
+    if (isPreviewingBlackHole && previewBlackHole) {
+      previewBlackHole.x = mouseX;
+      previewBlackHole.y = mouseY;
+      previewBlackHole.draw();
+    }
 
     requestAnimationFrame(animate);
   }
