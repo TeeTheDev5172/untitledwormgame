@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mod Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .file-upload-btn:hover {
+            background-color: #45a049;
+        }
+
+        #fileList {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            margin-bottom: 5px;
+        }
+
+        .file-item a {
+            color: #333;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .file-item a:hover {
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mod Manager</h1>
+        <label for="fileInput" class="file-upload-btn">Upload Mod</label>
+        <input type="file" id="fileInput" onchange="uploadFile()">
+        <div id="fileList"></div>
+    </div>
+
+    <script>
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const fileName = file.name;
+                    const fileContent = event.target.result;
+                    localStorage.setItem(fileName, fileContent);
+                    displayFiles();
+                }
+                reader.readAsText(file);
+            }
+        }
+
+        function displayFiles() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const fileName = localStorage.key(i);
+                const fileContent = localStorage.getItem(fileName);
+
+                const fileItem = document.createElement('div');
+                fileItem.classList.add('file-item');
+                fileItem.innerHTML = `<a href="#" onclick="downloadFile('${fileName}')">${fileName}</a>`;
+                fileList.appendChild(fileItem);
+            }
+        }
+
+        function downloadFile(fileName) {
+            const fileContent = localStorage.getItem(fileName);
+            const blob = new Blob([fileContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        displayFiles();
+    </script>
+</body>
+</html>
